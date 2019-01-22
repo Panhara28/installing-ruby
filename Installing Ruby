@@ -56,3 +56,210 @@ enter
 deployer$ sudo cp puma.conf puma-manager.conf /etc/init
 deployer$ sudo touch /etc/puma.conf
 deployer$ sudo sh 'echo "deployer ALL=(ALL) NOPASSWD=ALL" > /etc/deployer/sudoers.d/deployer'
+
+
+ADD TO Gemfile:
+group :development do
+  gem 'capistrano', '3.5.0'
+  gem 'capistrano-rvm'
+  gem 'capistrano-nginx'
+  gem 'capistrano3-puma'
+  gem 'capistrano-rails'
+  gem 'capistrano-rails-db'
+  gem 'capistrano-rails-console'
+  gem 'capistrano-upload-config'
+  gem 'sshkit-sudo'
+end
+
+RUN:
+your_app$ bundle install
+your_app$ cap install
+
+EDIT Capfile AS ATTACHED Capfile
+
+EDIT config/deploy.rb AS ATTACHED deploy.rb AND CHANGE VARIABLES IN IT
+
+RUN:
+your_app$ cp config/database.yml config/database.yml.example
+your_app$ cp config/secrets.yml config/secrets.yml.example
+your_app$ cap production config:init
+your_app$ echo '/config/database.production.yml' >> .gitignore
+your_app$ echo '/config/secrets.production.yml' >> .gitignore
+
+EDIT WITH YOUR PARAMETERS:
+/config/database.production.yml
+/config/secrets.production.yml
+
+RUN:
+your_app$ rails g capistrano:nginx_puma:config
+
+EDIT OR LEAVE AS IS:
+config/deploy/templates/nginx_conf.erb
+config/deploy/templates/puma.rb.erb
+
+GIT COMMIT AND PUSH CHANGES
+
+RUN:
+your_app$ cap production deploy
+
+CONGRATULATION! ALL DONE!
+CHECK YOUR RUNNIG SERVER!
+
+WAIT! ONE MORE THING TO DO.
+FOR UPSTART PUMA SERVER ADD LINE WITH FULL PATH OF YOUR APP IN /etc/puma.conf.
+RUN:
+deployer$ sudo nano /etc/puma.conf
+
+PASTE:
+/home/deployer/apps/<<YOUR APP>>/current
+
+SAVE:
+ctrl + x
+y
+enter
+
+FINALLY! YOU CAN RESTART SERVER TO CHECK PUMA AUTOSTART!
+RUN:
+deployer$ sudo shutdown -r now
+
+ADD TO Gemfile:
+group :development do
+  gem 'capistrano', '3.5.0'
+  gem 'capistrano-rvm'
+  gem 'capistrano-nginx'
+  gem 'capistrano3-puma'
+  gem 'capistrano-rails'
+  gem 'capistrano-rails-db'
+  gem 'capistrano-rails-console'
+  gem 'capistrano-upload-config'
+  gem 'sshkit-sudo'
+end
+
+RUN:
+your_app$ bundle install
+your_app$ cap install
+
+EDIT Capfile AS ATTACHED Capfile
+
+EDIT config/deploy.rb AS ATTACHED deploy.rb AND CHANGE VARIABLES IN IT
+
+RUN:
+your_app$ cp config/database.yml config/database.yml.example
+your_app$ cp config/secrets.yml config/secrets.yml.example
+your_app$ cap production config:init
+your_app$ echo '/config/database.production.yml' >> .gitignore
+your_app$ echo '/config/secrets.production.yml' >> .gitignore
+
+EDIT WITH YOUR PARAMETERS:
+/config/database.production.yml
+/config/secrets.production.yml
+
+RUN:
+your_app$ rails g capistrano:nginx_puma:config
+
+EDIT OR LEAVE AS IS:
+config/deploy/templates/nginx_conf.erb
+config/deploy/templates/puma.rb.erb
+
+GIT COMMIT AND PUSH CHANGES
+
+RUN:
+your_app$ cap production deploy
+
+CONGRATULATION! ALL DONE!
+CHECK YOUR RUNNIG SERVER!
+
+WAIT! ONE MORE THING TO DO.
+FOR UPSTART PUMA SERVER ADD LINE WITH FULL PATH OF YOUR APP IN /etc/puma.conf.
+RUN:
+deployer$ sudo nano /etc/puma.conf
+
+PASTE:
+/home/deployer/apps/<<YOUR APP>>/current
+
+SAVE:
+ctrl + x
+y
+enter
+
+FINALLY! YOU CAN RESTART SERVER TO CHECK PUMA AUTOSTART!
+RUN:
+deployer$ sudo shutdown -r now
+
+require 'capistrano/setup'
+require 'capistrano/deploy'
+require 'capistrano/nginx'
+require 'capistrano/puma'
+require 'capistrano/puma/nginx'
+require 'capistrano/rvm'
+require 'capistrano/rails'
+require 'capistrano/rails/db'
+require 'capistrano/rails/console'
+require 'capistrano/upload-config'
+require 'sshkit/sudo'
+
+Dir.glob('lib/capistrano/tasks/*.rake').each { |r| import r }
+
+# config valid only for current version of Capistrano
+lock '3.5.0'
+
+set :repo_url, '<<YOUR APP REPO>>'
+# ask :branch, `git rev-parse --abbrev-ref HEAD`.chomp
+
+set :user, 'deployer'
+set :application, '<<YOUR APPNAME>>'
+set :rails_env, 'production'
+server '<<YOUR SERVER>>', user: "#{fetch(:user)}", roles: %w{app db web}, primary: true
+set :deploy_to,       "/home/#{fetch(:user)}/apps/#{fetch(:application)}"
+set :pty, true
+
+set :linked_files, fetch(:linked_files, []).push('config/database.yml', 'config/secrets.yml', 'config/puma.rb')
+set :linked_dirs, fetch(:linked_dirs, []).push('log', 'tmp/pids', 'tmp/cache', 'tmp/sockets', 'vendor/bundle', 'public/system', 'public/uploads')
+
+set :config_example_suffix, '.example'
+set :config_files, %w{config/database.yml config/secrets.yml}
+set :puma_conf, "#{shared_path}/config/puma.rb"
+
+namespace :deploy do
+  before 'check:linked_files', 'config:push'
+  before 'check:linked_files', 'puma:config'
+  before 'check:linked_files', 'puma:nginx_config'
+  before 'deploy:migrate', 'deploy:db:create'
+  after 'puma:smart_restart', 'nginx:restart'
+end
+
+Capistrano::Rails::Db
+cap production deploy:db:abort_if_pending_migrations  # Run rake db:abort_if_pending_migrations
+cap production deploy:db:create                       # Run rake db:create
+cap production deploy:db:drop                         # Run rake db:drop
+cap production deploy:db:migrate                      # Run rake db:migrate         Migrate the database (options: VERSION=x, VERBOSE=false, SCOPE=blog)
+cap production deploy:db:migrate:down                 # Run rake db:migrate:down    Run the "down" for a given migration VERSION
+cap production deploy:db:migrate:redo                 # Run rake db:migrate:redo    Rollback the database one migration and re migrate up (options: STEP=x, VERSION=x)
+cap production deploy:db:migrate:reset                # Run rake db:migrate:reset   Reset your database using your migrations
+cap production deploy:db:migrate:status               # Run rake db:migrate:status  Display status of migrations
+cap production deploy:db:migrate:up                   # Run rake db:migrate:up      Run the "up" for a given migration VERSION
+cap production deploy:db:reset                        # Run rake db:reset           Drop and recreate the database from db/schema.rb and load the seeds
+cap production deploy:db:rollback                     # Run rake db:rollback        Roll the schema back to the previous version (specify steps w/ STEP=n)
+cap production deploy:db:seed                         # Run rake db:seed            Load the seed data from db/seed.rb
+cap production deploy:db:setup                        # Run rake db:setup           Create the database, load the schema, and initialize with the seed data
+cap production deploy:db:version                      # Run rake db:version         Retrieve the current schema version number
+
+
+Capistrano::Nginx
+nginx:setup                                           # creates /etc/nginx/sites-available/APPLICATION.conf and links it to /etc/nginx/sites-enabled/APPLICATION.conf
+nginx:stop                                            # invokes service nginx stop on server
+nginx:start                                           # invokes service nginx start on server
+nginx:restart                                         # invokes service nginx restart on server
+nginx:reload                                          # invokes service nginx reload on server
+nginx:force-reload                                    # invokes service nginx force-reload on server
+nginx:enable_site                                     # creates symlink in sites-enabled directory
+nginx:disable_site                                    # removes symlink from sites-enabled directory
+
+
+Capistrano::Rails::Console
+cap production rails:console                  # This will add a task rails:console
+cap production rails:console sandbox=1        # You can also start a sandbox session
+
+
+For more commands run:
+cap -T
