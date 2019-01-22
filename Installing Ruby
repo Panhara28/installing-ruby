@@ -1,15 +1,57 @@
-sudo apt-get -y install git-core curl zlib1g-dev build-essential libssl-dev libreadline-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev libcurl4-openssl-dev python-software-properties libffi-dev
+root# apt-get update
+root# apt-get upgrade
 
-gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
+root# adduser deployer
+root# gpasswd -a deployer sudo
 
-\curl -sSL https://get.rvm.io | bash -s stable
+root# nano /etc/ssh/sshd_config
+root# PermitRootLogin no
+root# service ssh restart
 
- source /home/deployer/.rvm/scripts/rvm
+root# exit
 
- rvm install 2.3.0 && rvm use --default 2.3.0
+ssh deployer@server
 
- echo "gem: --no-document" > ~/.gemrc
+deployer$ sudo apt-get -y install git-core curl zlib1g-dev build-essential libssl-dev libreadline-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev libcurl4-openssl-dev python-software-properties libffi-dev
 
- gem install bundler
+deployer$ gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
+deployer$ \curl -sSL https://get.rvm.io | bash -s stable
+deployer$ source /home/deployer/.rvm/scripts/rvm
+deployer$ rvm install 2.3.0 && rvm use --default 2.3.0
+deployer$ echo "gem: --no-document" > ~/.gemrc
+deployer$ gem install bundler
+deployer$ gem install rails -v 5.0.0.beta3
 
- gem install rails -v 5.0.0.beta3
+deployer$ curl -sL https://deb.nodesource.com/setup_4.x | sudo -E bash -
+deployer$ sudo apt-get install -y nodejs
+
+deployer$ sudo add-apt-repository ppa:nginx/stable
+deployer$ sudo apt-get update
+deployer$ sudo apt-get -y install nginx
+deployer$ sudo rm /etc/nginx/sites-available/default
+
+deployer$ export LANGUAGE=en_US.UTF-8
+deployer$ export LANG=en_US.UTF-8
+deployer$ export LC_ALL=en_US.UTF-8
+deployer$ locale-gen en_US.UTF-8
+deployer$ sudo dpkg-reconfigure locales
+
+deployer$ sudo apt-get -y install postgresql postgresql-contrib libpq-dev
+deployer$ sudo pg_createcluster 9.3 main --start
+deployer$ sudo -u postgres createuser deployer -s
+deployer$ sudo -u postgres psql
+postgres=# \password deployer
+postgres=# \q
+
+deployer$ wget https://raw.githubusercontent.com/puma/puma/master/tools/jungle/upstart/puma-manager.conf
+deployer$ wget https://raw.githubusercontent.com/puma/puma/master/tools/jungle/upstart/puma.conf
+deployer$ nano puma.conf
+SET:
+setuid deployer
+setgid deployer
+SAVE:
+ctrl + x
+y
+enter
+deployer$ sudo cp puma.conf puma-manager.conf /etc/init
+deployer$ sudo touch /etc/puma.conf
