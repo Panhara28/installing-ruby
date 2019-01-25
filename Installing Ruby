@@ -1,4 +1,4 @@
-Install Nginx On Digital Ocean Private Server
+### Install Nginx On Digital Ocean Private Server
 
 root# apt-get update
 root# apt-get upgrade
