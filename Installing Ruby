@@ -1,3 +1,5 @@
+Install Nginx On Digital Ocean Private Server
+
 root# apt-get update
 root# apt-get upgrade
 
@@ -6,6 +8,7 @@ root# gpasswd -a deployer sudo
 
 root# nano /etc/ssh/sshd_config
 root# PermitRootLogin no
+root# PasswordAuthentication yes
 root# service ssh restart
 
 root# exit
@@ -36,12 +39,7 @@ deployer$ export LC_ALL=en_US.UTF-8
 deployer$ locale-gen en_US.UTF-8
 deployer$ sudo dpkg-reconfigure locales
 
-deployer$ sudo apt-get -y install postgresql postgresql-contrib libpq-dev
-deployer$ sudo pg_createcluster 9.3 main --start
-deployer$ sudo -u postgres createuser deployer -s
-deployer$ sudo -u postgres psql
-postgres=# \password deployer
-postgres=# \q
+deployer$ sudo apt-get install mysql-server
 
 deployer$ wget https://raw.githubusercontent.com/puma/puma/master/tools/jungle/upstart/puma-manager.conf
 deployer$ wget https://raw.githubusercontent.com/puma/puma/master/tools/jungle/upstart/puma.conf
@@ -57,6 +55,7 @@ deployer$ sudo cp puma.conf puma-manager.conf /etc/init
 deployer$ sudo touch /etc/puma.conf
 deployer$ sudo sh 'echo "deployer ALL=(ALL) NOPASSWD=ALL" > /etc/deployer/sudoers.d/deployer'
 
+### Setup Gem To Our Project
 
 ADD TO Gemfile:
 group :development do
@@ -78,113 +77,7 @@ your_app$ cap install
 EDIT Capfile AS ATTACHED Capfile
 
 EDIT config/deploy.rb AS ATTACHED deploy.rb AND CHANGE VARIABLES IN IT
-
-RUN:
-your_app$ cp config/database.yml config/database.yml.example
-your_app$ cp config/secrets.yml config/secrets.yml.example
-your_app$ cap production config:init
-your_app$ echo '/config/database.production.yml' >> .gitignore
-your_app$ echo '/config/secrets.production.yml' >> .gitignore
-
-EDIT WITH YOUR PARAMETERS:
-/config/database.production.yml
-/config/secrets.production.yml
-
-RUN:
-your_app$ rails g capistrano:nginx_puma:config
-
-EDIT OR LEAVE AS IS:
-config/deploy/templates/nginx_conf.erb
-config/deploy/templates/puma.rb.erb
-
-GIT COMMIT AND PUSH CHANGES
-
-RUN:
-your_app$ cap production deploy
-
-CONGRATULATION! ALL DONE!
-CHECK YOUR RUNNIG SERVER!
-
-WAIT! ONE MORE THING TO DO.
-FOR UPSTART PUMA SERVER ADD LINE WITH FULL PATH OF YOUR APP IN /etc/puma.conf.
-RUN:
-deployer$ sudo nano /etc/puma.conf
-
-PASTE:
-/home/deployer/apps/<<YOUR APP>>/current
-
-SAVE:
-ctrl + x
-y
-enter
-
-FINALLY! YOU CAN RESTART SERVER TO CHECK PUMA AUTOSTART!
-RUN:
-deployer$ sudo shutdown -r now
-
-ADD TO Gemfile:
-group :development do
-  gem 'capistrano', '3.5.0'
-  gem 'capistrano-rvm'
-  gem 'capistrano-nginx'
-  gem 'capistrano3-puma'
-  gem 'capistrano-rails'
-  gem 'capistrano-rails-db'
-  gem 'capistrano-rails-console'
-  gem 'capistrano-upload-config'
-  gem 'sshkit-sudo'
-end
-
-RUN:
-your_app$ bundle install
-your_app$ cap install
-
-EDIT Capfile AS ATTACHED Capfile
-
-EDIT config/deploy.rb AS ATTACHED deploy.rb AND CHANGE VARIABLES IN IT
-
-RUN:
-your_app$ cp config/database.yml config/database.yml.example
-your_app$ cp config/secrets.yml config/secrets.yml.example
-your_app$ cap production config:init
-your_app$ echo '/config/database.production.yml' >> .gitignore
-your_app$ echo '/config/secrets.production.yml' >> .gitignore
-
-EDIT WITH YOUR PARAMETERS:
-/config/database.production.yml
-/config/secrets.production.yml
-
-RUN:
-your_app$ rails g capistrano:nginx_puma:config
-
-EDIT OR LEAVE AS IS:
-config/deploy/templates/nginx_conf.erb
-config/deploy/templates/puma.rb.erb
-
-GIT COMMIT AND PUSH CHANGES
-
-RUN:
-your_app$ cap production deploy
-
-CONGRATULATION! ALL DONE!
-CHECK YOUR RUNNIG SERVER!
-
-WAIT! ONE MORE THING TO DO.
-FOR UPSTART PUMA SERVER ADD LINE WITH FULL PATH OF YOUR APP IN /etc/puma.conf.
-RUN:
-deployer$ sudo nano /etc/puma.conf
-
-PASTE:
-/home/deployer/apps/<<YOUR APP>>/current
-
-SAVE:
-ctrl + x
-y
-enter
-
-FINALLY! YOU CAN RESTART SERVER TO CHECK PUMA AUTOSTART!
-RUN:
-deployer$ sudo shutdown -r now
+Copy code below to Capfile
 
 require 'capistrano/setup'
 require 'capistrano/deploy'
@@ -197,6 +90,8 @@ require 'capistrano/rails/db'
 require 'capistrano/rails/console'
 require 'capistrano/upload-config'
 require 'sshkit/sudo'
+
+copy code below to deploy.rb
 
 Dir.glob('lib/capistrano/tasks/*.rake').each { |r| import r }
 
@@ -227,6 +122,33 @@ namespace :deploy do
   before 'deploy:migrate', 'deploy:db:create'
   after 'puma:smart_restart', 'nginx:restart'
 end
+
+RUN:
+your_app$ cp config/database.yml config/database.yml.example
+your_app$ cp config/secrets.yml config/secrets.yml.example
+your_app$ cap production config:init
+your_app$ echo '/config/database.production.yml' >> .gitignore
+your_app$ echo '/config/secrets.production.yml' >> .gitignore
+
+EDIT WITH YOUR PARAMETERS:
+/config/database.production.yml
+/config/secrets.production.yml
+
+RUN:
+your_app$ rails g capistrano:nginx_puma:config
+
+GIT COMMIT AND PUSH CHANGES
+
+RUN:
+your_app$ cap production deploy
+
+CONGRATULATION! ALL DONE!
+CHECK YOUR RUNNIG SERVER!
+
+
+In localhost 
+
+Cap -T
 
 Capistrano::Rails::Db
 cap production deploy:db:abort_if_pending_migrations  # Run rake db:abort_if_pending_migrations
