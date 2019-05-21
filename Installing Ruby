@@ -53,7 +53,7 @@ y
 enter
 deployer$ sudo cp puma.conf puma-manager.conf /etc/init
 deployer$ sudo touch /etc/puma.conf
-deployer$ sudo sh 'echo "deployer ALL=(ALL) NOPASSWD=ALL" > /etc/deployer/sudoers.d/deployer'
+deployer$ sudo sh -c 'echo "panhara ALL=(ALL) NOPASSWD=ALL" > /etc/sudoers.d/panhara
 
 ### Setup Gem To Our Project
 
